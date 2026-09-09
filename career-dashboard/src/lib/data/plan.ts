@@ -1,0 +1,541 @@
+import type { PlanPhase, PlanStep } from "@/lib/types";
+
+/**
+ * The ordered plan. Work it top to bottom. Each step says why it is there,
+ * how to do it, and when it counts as done, so a Sunday review is a matter of
+ * reading the next open row rather than deciding what to do.
+ *
+ * Steps link to milestones by id; the roadmap derives milestone progress
+ * from how many of its steps are ticked.
+ */
+export const PLAN_PHASES: PlanPhase[] = [
+  {
+    key: "setup",
+    title: "Set up",
+    window: "This week",
+    summary:
+      "Tools, accounts and a schedule. Nothing here needs skill. It removes friction from every step that follows.",
+  },
+  {
+    key: "foundations",
+    title: "Foundations",
+    window: "Sep to Dec 2026",
+    summary:
+      "Algorithm fluency, the maths underneath machine learning, and your first models in PyTorch. Internship applications for summer 2027 open during this phase, so the career steps sit here too.",
+  },
+  {
+    key: "depth",
+    title: "Depth",
+    window: "Jan to Jun 2027",
+    summary:
+      "Build the core pieces of a deep learning stack yourself, then reproduce a paper. This is the work that makes a CV credible.",
+  },
+  {
+    key: "research",
+    title: "Research",
+    window: "Jul to Dec 2027",
+    summary: "Real research experience with a supervisor, and a second project with a systems angle.",
+  },
+  {
+    key: "conversion",
+    title: "Conversion",
+    window: "Jan to Aug 2028",
+    summary: "Thesis, interview preparation and the application run.",
+  },
+];
+
+export const PLAN_STEPS: PlanStep[] = [
+  // ------------------------------------------------------------ set up
+  {
+    id: "s01",
+    phase: "setup",
+    title: "Set up the working environment",
+    category: "PYTORCH",
+    estimate: "2 hours",
+    why: "Every later step assumes you can open a notebook, run PyTorch and push to GitHub without thinking about it.",
+    how: [
+      "Install Python 3.12 with uv (uv python install 3.12) or Miniconda.",
+      "Install VS Code with the Python and Jupyter extensions.",
+      "Install git, set your name and email, and create a GitHub account if you do not have one.",
+      "Create a public repo (for example ml-journey) with a README that gets one line per week saying what you did. Clone it.",
+      "In the repo, create a virtual environment and install torch, numpy, matplotlib and jupyter. CPU-only PyTorch is fine for the first year.",
+      "Run python -c \"import torch; print(torch.__version__)\", then commit a notebook that multiplies two tensors.",
+    ],
+    doneWhen: "The repo has a first commit and the import works.",
+    resources: [
+      { label: "uv", url: "https://docs.astral.sh/uv/" },
+      { label: "PyTorch install", url: "https://pytorch.org/get-started/locally/" },
+    ],
+  },
+  {
+    id: "s02",
+    phase: "setup",
+    title: "Set up the practice accounts",
+    category: "DSA",
+    estimate: "30 minutes",
+    why: "The algorithms track runs on the NeetCode 150. Having the accounts ready removes the excuse.",
+    how: [
+      "Create a LeetCode account. The free tier covers the whole list.",
+      "Open the NeetCode 150 list and bookmark it. Work it in the order shown there and in the Progress tab: the patterns build on each other.",
+      "Make a dsa/ folder in your repo, one file per problem, named by pattern and title.",
+    ],
+    doneWhen: "You can open a problem, solve it locally and commit it in under two minutes.",
+    resources: [{ label: "NeetCode 150", url: "https://neetcode.io/practice" }],
+  },
+  {
+    id: "s03",
+    phase: "setup",
+    title: "Fix the weekly schedule",
+    category: "CAREER",
+    estimate: "30 minutes",
+    why: "The plan is two years long. It only happens if the hours are on the calendar before the term fills them.",
+    how: [
+      "Put four blocks in your calendar every week: two 90-minute algorithms blocks and two 2-hour ML blocks. Mornings before lectures survive the term best.",
+      "Add a 30-minute Sunday review: tick steps here, log hours, pick next week's problems.",
+      "Treat the blocks like lectures. Move them, never delete them.",
+    ],
+    doneWhen: "The next four weeks have all the blocks in place.",
+  },
+
+  // ------------------------------------------------------------ foundations
+  {
+    id: "s04",
+    phase: "foundations",
+    title: "Python fluency check",
+    category: "PYTORCH",
+    estimate: "1 week",
+    why: "ML code is Python. Slow Python costs you time on every step after this one.",
+    how: [
+      "Read Fluent Python chapters 1, 2, 5, 7 and 17 (data model, sequences, first-class functions, dataclasses, iterators and generators). Skim what you already know.",
+      "Write a small script that uses a dataclass, a generator, a comprehension, a context manager and type hints. Keep it in the repo.",
+      "Learn numpy broadcasting properly: write down the rules and test each one in a notebook.",
+    ],
+    doneWhen:
+      "You can write a class with __iter__ and __len__, a generator and a typed function without looking anything up, and explain why a[:, None] * b[None, :] is an outer product.",
+    resources: [
+      { label: "Fluent Python", url: "https://www.fluentpython.com/" },
+      { label: "NumPy broadcasting", url: "https://numpy.org/doc/stable/user/basics.broadcasting.html" },
+    ],
+  },
+  {
+    id: "s05",
+    phase: "foundations",
+    title: "NeetCode 150: Arrays and Hashing, Two Pointers, Sliding Window",
+    category: "DSA",
+    milestoneId: "m1",
+    estimate: "3 weeks, 20 problems",
+    why: "These three patterns underlie most interview questions, and they are the fastest way to get used to the loop of attempt, review, retry.",
+    how: [
+      "Work one pattern at a time, in list order.",
+      "Per problem: 25 minutes on your own. If stuck, read the solution, close it, and write it again from memory. Then note the pattern in one line.",
+      "Tick each problem in the Progress tab as you go so the burndown moves.",
+      "Every Sunday, redo the two problems you found hardest that week without notes.",
+    ],
+    doneWhen: "All 20 problems ticked, and you can describe the sliding window template without looking.",
+    resources: [{ label: "NeetCode 150", url: "https://neetcode.io/practice" }],
+  },
+  {
+    id: "s06",
+    phase: "foundations",
+    title: "NeetCode 150: Stack, Binary Search, Linked List",
+    category: "DSA",
+    milestoneId: "m1",
+    estimate: "3 weeks, 25 problems",
+    why: "Binary search on the answer, monotonic stacks and pointer manipulation come up constantly, and each has one template worth memorising.",
+    how: [
+      "Same method as the previous step: 25 minutes, then the solution, then rewrite it from memory.",
+      "For binary search, write the boundary conditions down before coding. Koko Eating Bananas is the model for searching on the answer.",
+      "For linked lists, always start with a dummy head. Draw the pointers before writing them.",
+    ],
+    doneWhen: "25 ticked. You can write a correct binary search first time, boundaries included.",
+  },
+  {
+    id: "s07",
+    phase: "foundations",
+    title: "Linear algebra refresh",
+    category: "PHYSICS",
+    milestoneId: "m2",
+    estimate: "2 weeks",
+    why: "Everything in deep learning is matrix multiplication and its gradient. A physics degree covers this in a different language. Translate it.",
+    how: [
+      "Watch 3Blue1Brown, Essence of Linear Algebra (about three hours in total).",
+      "In numpy, implement by hand: matrix multiply with loops and compare to @; eigendecomposition of a symmetric 2x2; SVD of a small matrix; least squares via the normal equations and via np.linalg.lstsq.",
+      "Implement PCA from scratch on a small dataset (sklearn digits) using SVD and plot the first two components.",
+    ],
+    doneWhen: "You can explain what SVD does geometrically, and your PCA matches sklearn to floating point error.",
+    resources: [
+      { label: "Essence of Linear Algebra", url: "https://www.3blue1brown.com/topics/linear-algebra" },
+      { label: "MIT 18.06", url: "https://ocw.mit.edu/courses/18-06-linear-algebra-spring-2010/" },
+    ],
+  },
+  {
+    id: "s08",
+    phase: "foundations",
+    title: "Probability and statistics refresh",
+    category: "PHYSICS",
+    milestoneId: "m2",
+    estimate: "2 weeks",
+    why: "Loss functions are negative log likelihoods. Interviewers ask about bias and variance, maximum likelihood and Bayes constantly.",
+    how: [
+      "Blitzstein and Hwang, Introduction to Probability, chapters 1 to 7, or the Stat 110 lectures. A handful of exercises per chapter, not all of them.",
+      "Derive the maximum likelihood estimate for a Gaussian mean and variance, and for a Bernoulli parameter. Write the derivations up.",
+      "Show that minimising mean squared error is MLE under Gaussian noise, and cross-entropy is MLE for a categorical.",
+      "Write one page on the bias-variance decomposition with a numpy experiment that shows it.",
+    ],
+    doneWhen: "You can do all four derivations on a whiteboard.",
+    resources: [{ label: "Stat 110", url: "https://projects.iq.harvard.edu/stat110" }],
+  },
+  {
+    id: "s09",
+    phase: "foundations",
+    title: "Build a target list and a one-page CV",
+    category: "CAREER",
+    milestoneId: "m4",
+    estimate: "1 week",
+    why: "Research internship applications for summer 2027 open from October 2026 and many close by January. If the list and the CV do not exist by then, you miss the cycle.",
+    how: [
+      "List 10 to 15 targets: industry labs (DeepMind, Mistral, Cohere, Anthropic, Isomorphic, Microsoft Research), university groups at Imperial and elsewhere (UROP placements), and any summer research programmes.",
+      "For each, record the role name, when it opens, the deadline and what they ask for. Add them to the Applications table in the Roadmap tab.",
+      "Write a one-page CV: education, the projects from this plan with the repo link, skills. No paragraphs. Ask someone who reviews CVs to read it.",
+      "Ask one lecturer who knows your work whether they would act as a reference.",
+    ],
+    doneWhen: "The Applications table has at least ten rows and the CV is a single page PDF.",
+  },
+  {
+    id: "s10",
+    phase: "foundations",
+    title: "NeetCode 150: Trees, Tries, Heap",
+    category: "DSA",
+    milestoneId: "m1",
+    estimate: "3 weeks, 25 problems",
+    why: "Recursion on trees is the cleanest place to learn to trust recursion, and heaps are the tool behind half of the top-k questions.",
+    how: [
+      "Same method. Recursive tree problems first (invert, depth, diameter), then level order with BFS, then the BST properties.",
+      "Heaps: learn heapq and be able to say when a heap beats sorting.",
+    ],
+    doneWhen: "25 ticked. You can write BFS and DFS on a tree from memory.",
+  },
+  {
+    id: "s11",
+    phase: "foundations",
+    title: "PyTorch basics: an MLP with your own training loop",
+    category: "PYTORCH",
+    milestoneId: "m3",
+    estimate: "2 weeks",
+    why: "Frameworks hide the training loop. You need to have written one by hand before you can debug anyone else's.",
+    how: [
+      "Do the official PyTorch 60-minute blitz.",
+      "Train an MLP on MNIST in plain PyTorch: your own Dataset and DataLoader use, model, loss, optimiser and loop. No Lightning, no high-level helpers.",
+      "Log train and validation loss every epoch. Plot them. Add early stopping.",
+      "Break it on purpose: wrong learning rate, no shuffling, a missing optimizer.zero_grad(). Watch what each does to the curves.",
+      "Commit it with a README that has the curves and the final accuracy.",
+    ],
+    doneWhen: "Over 97% test accuracy with your own loop, and you can explain what every line does.",
+    resources: [
+      {
+        label: "60-minute blitz",
+        url: "https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html",
+      },
+    ],
+  },
+  {
+    id: "s12",
+    phase: "foundations",
+    title: "Neural Networks: Zero to Hero, lectures 1 to 4",
+    category: "PYTORCH",
+    milestoneId: "m3",
+    estimate: "4 weeks",
+    why: "Karpathy's course is the fastest path from being able to call torch to understanding backprop, and it produces code you can show.",
+    how: [
+      "Watch each lecture with the notebook open and type everything yourself. Do not copy.",
+      "micrograd: build it, then add one operation he does not cover (exp, or the tanh derivative from scratch) and check it against PyTorch.",
+      "makemore 1 to 3: bigram, MLP, then the batchnorm and activations lecture. Pay attention to the initialisation discussion. It comes up in interviews.",
+      "Commit each notebook with a paragraph on what you learned.",
+    ],
+    doneWhen: "Your micrograd passes its tests and you can explain backprop through a matrix multiply on paper.",
+    resources: [{ label: "Zero to Hero", url: "https://karpathy.ai/zero-to-hero.html" }],
+  },
+  {
+    id: "s13",
+    phase: "foundations",
+    title: "Apply for summer 2027 research internships",
+    category: "CAREER",
+    milestoneId: "m4",
+    estimate: "Oct 2026 to Jan 2027, as postings open",
+    why: "One real research summer is worth more than any course. It is the single biggest lever for a 2028 applied scientist role.",
+    how: [
+      "Apply to every target as it opens. Tailor the first paragraph of the cover letter to the group's recent work; the rest can be shared.",
+      "Move each row in the Applications table as it progresses, and set the next step and its date.",
+      "Follow up two weeks after applying if you have heard nothing.",
+      "Prepare for screens with the NeetCode work you have already done and a five-minute explanation of one project from this plan.",
+    ],
+    doneWhen: "Every target has an application submitted, or a recorded reason not to.",
+  },
+  {
+    id: "s14",
+    phase: "foundations",
+    title: "NeetCode 150: Backtracking and Graphs",
+    category: "DSA",
+    milestoneId: "m1",
+    estimate: "3 weeks, 22 problems",
+    why: "Graph problems are where most candidates run out of templates. Having BFS, DFS, topological sort and union-find ready is a real edge.",
+    how: [
+      "Backtracking first. The template is choose, explore, unchoose. Write it out once and reuse it.",
+      "Graphs: grid BFS and DFS, adjacency lists, topological sort (Course Schedule), union-find (Redundant Connection).",
+    ],
+    doneWhen: "22 ticked. You can write topological sort and union-find from memory.",
+  },
+
+  // ------------------------------------------------------------ depth
+  {
+    id: "s15",
+    phase: "depth",
+    title: "Write a tensor autograd engine",
+    category: "PYTORCH",
+    milestoneId: "m5",
+    estimate: "3 weeks",
+    why: "It is the difference between using .backward() and knowing what it does. It is also a classic interview topic.",
+    how: [
+      "Start from micrograd, but make values numpy arrays rather than scalars.",
+      "Implement add, mul, matmul, sum, mean, relu, exp, log and reshape, with backward passes that handle broadcasting (the gradient has to be summed back to the input shape).",
+      "Write a test that compares gradients against torch.autograd on random inputs, for each operation and for a two-layer MLP.",
+      "Train a small MLP on MNIST with it.",
+    ],
+    doneWhen: "All gradient tests pass to 1e-5 and the MLP trains.",
+  },
+  {
+    id: "s16",
+    phase: "depth",
+    title: "Attention and a small transformer from scratch",
+    category: "PYTORCH",
+    milestoneId: "m5",
+    estimate: "3 weeks",
+    why: "Transformers are the default architecture. Interviewers expect you to draw one and explain every tensor shape.",
+    how: [
+      "Follow Karpathy's Let's build GPT lecture, but write the attention block yourself before watching his.",
+      "Implement token and position embeddings, causal multi-head self-attention, the MLP block, residuals and layer norm. No nn.MultiheadAttention.",
+      "Train a character-level model on the tiny Shakespeare dataset, on your laptop or a free Colab GPU.",
+      "Write down the shape of every tensor in one forward pass and the parameter count formula. Check it against the model.",
+    ],
+    doneWhen: "Validation loss under 1.5 on tiny Shakespeare, and you can draw the block diagram with shapes from memory.",
+    resources: [
+      { label: "Let's build GPT", url: "https://www.youtube.com/watch?v=kCc8FmEb1nY" },
+      { label: "nanoGPT", url: "https://github.com/karpathy/nanoGPT" },
+    ],
+  },
+  {
+    id: "s17",
+    phase: "depth",
+    title: "NeetCode 150: Dynamic Programming, 1-D and 2-D",
+    category: "DSA",
+    milestoneId: "m1",
+    estimate: "4 weeks, 23 problems",
+    why: "DP is the pattern people fail on. It is learnable with one discipline: state the recurrence before writing code.",
+    how: [
+      "For each problem write the recurrence in words first, then the memoised recursion, then the bottom-up table. Do not skip to the table.",
+      "Keep a list of the recurrences. Reread it before each session.",
+    ],
+    doneWhen: "23 ticked. You can derive the recurrence for Coin Change, Longest Common Subsequence and Edit Distance without notes.",
+  },
+  {
+    id: "s18",
+    phase: "depth",
+    title: "Reproduce a published paper end to end",
+    category: "PYTORCH",
+    milestoneId: "m6",
+    estimate: "6 weeks",
+    why: "This is the project that gets read. Saying you reproduced a paper and found something is a stronger line on a CV than any course.",
+    how: [
+      "Pick a well-cited paper small enough to train on one GPU in hours: a ResNet ablation on CIFAR-10, or a small-scale scaling law replication. Check it reports enough detail to reproduce.",
+      "Implement it from the paper, not from their code. Only open their code when stuck.",
+      "Reproduce the main table or figure. Record every discrepancy and what you think caused it.",
+      "Write a README with the results table, the discrepancies, and one thing you tried beyond the paper.",
+      "Make the repo public and put it on the CV.",
+    ],
+    doneWhen:
+      "Public repo, numbers within the reported error (or an honest explanation of why not), and a write-up someone else could follow.",
+    resources: [{ label: "Papers with Code", url: "https://paperswithcode.com/" }],
+  },
+  {
+    id: "s19",
+    phase: "depth",
+    title: "Read papers on a schedule",
+    category: "PYTORCH",
+    milestoneId: "m6",
+    estimate: "2 papers a week, ongoing",
+    why: "Applied scientist interviews include a research discussion. You need opinions, and opinions come from volume.",
+    how: [
+      "Two papers a week in the area you want to work in. Start with the ones cited by your target groups.",
+      "For each, four lines in a notes file: problem, method, result, what you would try next.",
+      "Once a month, write one page on a trend you see across the papers.",
+    ],
+    doneWhen: "Twenty summaries in the notes file.",
+    resources: [{ label: "arXiv cs.LG", url: "https://arxiv.org/list/cs.LG/recent" }],
+  },
+  {
+    id: "s20",
+    phase: "depth",
+    title: "Optimisation module, with the ML angle",
+    category: "PHYSICS",
+    milestoneId: "m9",
+    estimate: "One term",
+    why: "The theory behind SGD, momentum and Adam is optimisation. Taking the module with that lens turns a course credit into interview answers.",
+    how: [
+      "For every method the module covers, find its counterpart in torch.optim and read the source.",
+      "Implement SGD with momentum and Adam yourself as torch.optim.Optimizer subclasses and check they match PyTorch on a test loss.",
+      "Write one page on why Adam has bias correction and when it fails.",
+    ],
+    doneWhen: "Your optimisers match PyTorch, and you can state the convergence conditions for SGD.",
+  },
+
+  // ------------------------------------------------------------ research
+  {
+    id: "s21",
+    phase: "research",
+    title: "Research internship or summer project",
+    category: "CAREER",
+    milestoneId: "m7",
+    estimate: "10 weeks",
+    why: "Research experience with a supervisor is what separates candidates for applied scientist roles.",
+    how: [
+      "If an application from step 13 came through, take it. If not, arrange a UROP or a summer project with a lecturer, or run your own project with a clear question and a weekly log.",
+      "Keep a research log: one entry per day, what you tried and what happened.",
+      "Aim for one artefact at the end: a report, a public repo or a poster.",
+      "Ask your supervisor at the end whether they would write a reference, and stay in touch.",
+    ],
+    doneWhen: "The artefact exists and a supervisor can vouch for the work.",
+  },
+  {
+    id: "s22",
+    phase: "research",
+    title: "Efficient inference project",
+    category: "PYTORCH",
+    milestoneId: "m8",
+    estimate: "6 weeks",
+    why: "A systems angle is rare in physics graduates and common in applied scientist job specs. It also sets up the thesis.",
+    how: [
+      "Take a small open model (a GPT-2 sized checkpoint) and build a benchmark harness: tokens per second and memory at a fixed batch size.",
+      "Implement three things and measure each: a KV cache, int8 weight quantisation, and either speculative decoding or a fused attention path via torch.compile.",
+      "Write up a results table with the speedup and the quality cost (perplexity) of each.",
+    ],
+    doneWhen: "A public repo with a benchmark table showing a measured speedup and its cost.",
+    resources: [{ label: "Let's reproduce GPT-2", url: "https://www.youtube.com/watch?v=l8pRSuU81PU" }],
+  },
+  {
+    id: "s23",
+    phase: "research",
+    title: "Reinforcement learning module, plus PPO from scratch",
+    category: "PHYSICS",
+    milestoneId: "m9",
+    estimate: "One term",
+    why: "RL underlies post-training (RLHF) and is an interview topic on its own.",
+    how: [
+      "Alongside the module, implement tabular Q-learning, then DQN, then PPO on Gymnasium CartPole and LunarLander.",
+      "Reproduce one figure from the PPO paper.",
+      "Read the InstructGPT paper and write one page on how PPO is used there.",
+    ],
+    doneWhen: "PPO solves LunarLander and you can explain the clipped objective.",
+    resources: [
+      { label: "Gymnasium", url: "https://gymnasium.farama.org/" },
+      { label: "Spinning Up", url: "https://spinningup.openai.com/" },
+    ],
+  },
+  {
+    id: "s24",
+    phase: "research",
+    title: "Statistical mechanics, connected to ML",
+    category: "PHYSICS",
+    milestoneId: "m9",
+    estimate: "One term",
+    why: "Energy-based models, Boltzmann machines, diffusion and sampling are statistical mechanics. This is the physics background that is a genuine advantage.",
+    how: [
+      "Alongside the module, implement Metropolis-Hastings sampling for a 2D Ising model and plot magnetisation against temperature.",
+      "Read about energy-based models and score matching, and write one page connecting the partition function to contrastive losses.",
+      "Implement a minimal diffusion model on MNIST from a tutorial, and connect the noise schedule to Langevin dynamics.",
+    ],
+    doneWhen: "The Ising simulation shows the phase transition and the one-page note exists.",
+    resources: [
+      {
+        label: "Understanding Diffusion Models (Luo)",
+        url: "https://arxiv.org/abs/2208.11970",
+      },
+    ],
+  },
+
+  // ------------------------------------------------------------ conversion
+  {
+    id: "s25",
+    phase: "conversion",
+    title: "Agree the thesis topic and run it",
+    category: "PHYSICS",
+    milestoneId: "m10",
+    estimate: "6 months",
+    why: "The thesis is the largest single piece of work you will be able to talk about in interviews.",
+    how: [
+      "By November 2027, agree a topic with a supervisor that builds on step 21 or 22: efficient inference, sampling, or something that uses the physics.",
+      "Write the introduction and related work in the first month, while reading, not at the end.",
+      "Weekly supervisor meetings, with a one-paragraph written update sent beforehand.",
+      "Keep the code in a repo from day one, with every experiment reproducible from a script.",
+    ],
+    doneWhen: "Submitted, with a public repo and a 20-minute talk you can give about it.",
+  },
+  {
+    id: "s26",
+    phase: "conversion",
+    title: "Interview preparation",
+    category: "DSA",
+    milestoneId: "m11",
+    estimate: "8 weeks",
+    why: "Applied scientist loops have four parts: coding, ML fundamentals, ML system design and a research talk. Each needs practice.",
+    how: [
+      "Coding: redo NeetCode problems you have not touched in three months, two a day, timed.",
+      "Fundamentals: work through the question sets in the Machine Learning Interviews book by Chip Huyen.",
+      "System design: practise three end-to-end designs out loud (a recommender, a fraud model, an LLM-backed feature), covering data, training, serving and monitoring.",
+      "Research talk: 20 minutes on the thesis or the paper reproduction. Give it to two people who will ask hard questions.",
+      "Do three mock interviews with other people, not with yourself.",
+    ],
+    doneWhen: "Three mock interviews done and the talk given twice.",
+    resources: [{ label: "ML Interviews book", url: "https://huyenchip.com/ml-interviews-book/" }],
+  },
+  {
+    id: "s27",
+    phase: "conversion",
+    title: "Applied Scientist applications",
+    category: "CAREER",
+    milestoneId: "m11",
+    estimate: "Jan to Apr 2028",
+    why: "Most graduate applied scientist roles open in the autumn and spring before the start date. Missing the window costs a year.",
+    how: [
+      "Refresh the target list to 15 roles. Applied scientist, research engineer and ML engineer titles all count.",
+      "Update the CV with the internship, the thesis and the two projects. Still one page.",
+      "Apply in batches of five a week. Track every one in the Applications table with its next step.",
+      "Ask the internship supervisor and the thesis supervisor for references.",
+      "Follow up after two weeks. Keep notes on every interview question you are asked.",
+    ],
+    doneWhen: "15 applications submitted, each with a tracked stage.",
+  },
+  {
+    id: "s28",
+    phase: "conversion",
+    title: "Decide",
+    category: "CAREER",
+    milestoneId: "m11",
+    estimate: "Jun to Aug 2028",
+    why: "The plan ends when you have signed something.",
+    how: [
+      "Compare offers on the work itself, the team, and who you would learn from. Then compensation.",
+      "Negotiate once, in writing, with a specific number.",
+      "Tell everyone who helped, especially the referees.",
+    ],
+    doneWhen: "Contract signed.",
+  },
+];
+
+/** 1-based position in the plan, used wherever a step is shown out of context. */
+export function stepNumber(id: string) {
+  return PLAN_STEPS.findIndex((s) => s.id === id) + 1;
+}
+
+export function stepsInPhase(phaseKey: string) {
+  return PLAN_STEPS.filter((s) => s.phase === phaseKey);
+}

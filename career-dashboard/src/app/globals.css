@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  Palette: instrument panel, not marketing site. Deep navy ink on cool paper,
+  one working blue for interactive state, and four fixed category hues that
+  mean the same thing in every chart, table and tag on the page.
+*/
+:root {
+  --ink: 217 46% 11%;
+  --paper: 214 32% 97%;
+  --surface: 0 0% 100%;
+  --line: 214 26% 89%;
+  --muted: 216 14% 46%;
+
+  --signal: 222 76% 53%;
+  --good: 168 64% 33%;
+  --warn: 30 74% 45%;
+  --risk: 358 62% 48%;
+
+  --dsa: 222 76% 53%;
+  --pytorch: 266 52% 56%;
+  --physics: 168 64% 33%;
+  --career: 30 74% 45%;
+
+  --c-dsa: hsl(222 76% 53%);
+  --c-pytorch: hsl(266 52% 56%);
+  --c-physics: hsl(168 64% 33%);
+  --c-career: hsl(30 74% 45%);
+
+  --grid-line: hsl(214 26% 92%);
+}
+
+.dark {
+  --ink: 210 30% 94%;
+  --paper: 218 33% 9%;
+  --surface: 218 30% 12%;
+  --line: 217 20% 22%;
+  --muted: 215 15% 62%;
+
+  --signal: 219 84% 68%;
+  --good: 166 52% 50%;
+  --warn: 34 82% 62%;
+  --risk: 358 74% 66%;
+
+  --c-dsa: hsl(219 84% 68%);
+  --c-pytorch: hsl(266 62% 71%);
+  --c-physics: hsl(166 52% 50%);
+  --c-career: hsl(34 82% 62%);
+
+  --grid-line: hsl(217 20% 20%);
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--line));
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: hsl(var(--paper));
+    color: hsl(var(--ink));
+    font-feature-settings: "cv05" 1, "ss01" 1;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Numbers line up in every table and KPI without extra classes. */
+  table,
+  [data-numeric] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid hsl(var(--signal));
+    outline-offset: 2px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--line));
+    border-radius: 6px;
+  }
+}
+
+@layer utilities {
+  /* Hairline separators between grid cells without doubling borders. */
+  .divide-grid > * + * {
+    border-left: 1px solid hsl(var(--line));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Recharts inherits none of the above by default. */
+.recharts-cartesian-grid line {
+  stroke: var(--grid-line);
+}
+.recharts-text {
+  fill: hsl(var(--muted));
+  font-size: 11px;
+}
