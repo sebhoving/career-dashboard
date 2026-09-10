@@ -8,27 +8,25 @@ import { hasSupabase } from "@/lib/supabase";
 const KEY = "dashboard-local-v1";
 
 /**
- * Keeps what you tick between visits.
+ * Keeps what you tick between visits when there is no backend.
  *
  * Without Supabase this browser is the database: tasks, applications, plan
  * steps, problem solves and logged time all live in localStorage. With
- * Supabase the tables own tasks, applications and problems, and only the
- * two things the schema has no home for (plan steps and logged time) are
- * kept here.
+ * Supabase every one of those has a table, so this hook stands down entirely
+ * and the bootstrap snapshot is the only source.
  *
- * Load runs once on mount, before the bootstrap fetch can resolve, so the
+ * The load runs once on mount, before the bootstrap fetch can resolve, so the
  * saved state is in place before anything else touches the store.
  */
 export function useLocalPersistence() {
   const loadLocal = useDashboard((s) => s.loadLocal);
 
   useEffect(() => {
+    if (hasSupabase) return;
+
     try {
       const raw = window.localStorage.getItem(KEY);
-      if (raw) {
-        const saved = JSON.parse(raw) as LocalState;
-        loadLocal(hasSupabase ? { planDone: saved.planDone, timeLog: saved.timeLog } : saved);
-      }
+      if (raw) loadLocal(JSON.parse(raw) as LocalState);
     } catch {
       // Blocked or corrupt storage. Start from the empty state.
     }
@@ -42,14 +40,15 @@ export function useLocalPersistence() {
         problems: s.problems,
       }),
       (slice) => {
-        const local: LocalState = { planDone: slice.planDone, timeLog: slice.timeLog };
-        if (!hasSupabase) {
-          local.tasks = slice.tasks;
-          local.applications = slice.applications;
-          local.solved = Object.fromEntries(
+        const local: LocalState = {
+          tasks: slice.tasks,
+          applications: slice.applications,
+          planDone: slice.planDone,
+          timeLog: slice.timeLog,
+          solved: Object.fromEntries(
             slice.problems.filter((p) => p.solvedAt).map((p) => [p.id, p.solvedAt!]),
-          );
-        }
+          ),
+        };
         try {
           window.localStorage.setItem(KEY, JSON.stringify(local));
         } catch {

@@ -4,8 +4,8 @@ import { useMemo } from "react";
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { CategoryTag, StatusPill } from "@/components/ui/badge";
-import { PLAN_STEPS, stepNumber } from "@/lib/data/plan";
-import { milestoneProgress, useDashboard } from "@/lib/store";
+import { stepNumber } from "@/lib/data/plan";
+import { milestoneProgress, stepsForMilestone, useDashboard } from "@/lib/store";
 import { CATEGORY_VAR, type Milestone } from "@/lib/types";
 import { cn, daysBetween, shortDate, today } from "@/lib/utils";
 
@@ -147,7 +147,7 @@ export function GanttChart() {
                     const width = Math.max(0.8, pct(m.endDate) - left);
                     const isOpen = focused === m.id;
                     const progress = milestoneProgress(m, planDone);
-                    const steps = PLAN_STEPS.filter((s) => s.milestoneId === m.id);
+                    const steps = stepsForMilestone(m);
                     const children = tasks.filter((t) => t.milestoneId === m.id);
 
                     return (

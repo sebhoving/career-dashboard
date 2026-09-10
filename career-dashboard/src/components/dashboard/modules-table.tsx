@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Panel, PanelBody, PanelHeader } from "@/components/ui/panel";
 import { useDashboard } from "@/lib/store";
@@ -29,10 +30,10 @@ const columns: Column<Module>[] = [
     className: "flex-1 min-w-0",
     sortValue: (m) => m.title,
     cell: (m) => (
-      <span className="block truncate">
+      <span className="block truncate" title={m.title}>
         {m.title}
-        <span data-numeric className="ml-2 text-micro text-muted">
-          {m.code}
+        <span data-numeric className="block truncate text-micro text-muted">
+          {m.code} · {m.credits} ECTS
         </span>
       </span>
     ),
@@ -41,7 +42,7 @@ const columns: Column<Module>[] = [
     key: "term",
     header: "Term",
     className: "w-[110px] shrink-0",
-    sortValue: (m) => m.term,
+    sortValue: (m) => `${m.academicYear} ${m.term}`,
     cell: (m) => <span className="text-micro text-muted">{m.term}</span>,
   },
   {
@@ -56,17 +57,58 @@ const columns: Column<Module>[] = [
     header: "What transfers",
     className: "flex-1 min-w-0",
     secondary: true,
-    cell: (m) => <span className="text-micro text-muted">{m.carryOver}</span>,
+    cell: (m) => (
+      <span className="text-micro text-muted" title={m.carryOver}>
+        {m.carryOver}
+      </span>
+    ),
   },
 ];
 
+/** ECTS per term within each academic year, so a heavy term is visible before it starts. */
+function termLoad(modules: Module[]) {
+  const years = new Map<string, Map<string, number>>();
+  modules.forEach((m) => {
+    const terms = years.get(m.academicYear) ?? new Map<string, number>();
+    terms.set(m.term, (terms.get(m.term) ?? 0) + m.credits);
+    years.set(m.academicYear, terms);
+  });
+  return [...years.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([year, terms]) => ({
+      year,
+      terms: [...terms.entries()].sort(([a], [b]) => a.localeCompare(b)),
+      total: [...terms.values()].reduce((sum, n) => sum + n, 0),
+    }));
+}
+
 export function ModulesTable() {
   const modules = useDashboard((s) => s.modules);
+  const load = useMemo(() => termLoad(modules), [modules]);
 
   return (
     <Panel>
       <PanelHeader title="Degree modules" hint="Ranked by what carries into the target role" />
       <PanelBody className="p-0">
+        {load.map(({ year, terms, total }) => (
+          <dl
+            key={year}
+            className="flex flex-wrap gap-x-5 gap-y-1 border-b border-line px-3 py-2 text-micro text-muted"
+          >
+            <div className="flex gap-1.5 text-ink">
+              <dt className="font-medium">{year || "Year not set"}</dt>
+              <dd data-numeric>{total} ECTS</dd>
+            </div>
+            {terms.map(([term, ects]) => (
+              <div key={term} className="flex gap-1.5">
+                <dt>{term}</dt>
+                <dd data-numeric className="text-ink">
+                  {ects}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ))}
         <DataTable rows={modules} columns={columns} rowKey={(m) => m.id} pageSize={10} />
       </PanelBody>
     </Panel>

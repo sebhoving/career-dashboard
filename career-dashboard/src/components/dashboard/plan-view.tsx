@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { CategoryTag } from "@/components/ui/badge";
 import { PLAN_PHASES, PLAN_STEPS, stepNumber } from "@/lib/data/plan";
 import { planProgress, useDashboard } from "@/lib/store";
+import { usePlanActions } from "@/lib/hooks/use-plan-actions";
 import { can, VIEWER_HINT } from "@/lib/rbac";
 import { cn, shortDate } from "@/lib/utils";
 import type { PlanStep } from "@/lib/types";
@@ -16,10 +17,10 @@ import type { PlanStep } from "@/lib/types";
  */
 export function PlanView() {
   const planDone = useDashboard((s) => s.planDone);
-  const togglePlanStep = useDashboard((s) => s.togglePlanStep);
   const focusedStepId = useDashboard((s) => s.focusedStepId);
   const focusStep = useDashboard((s) => s.focusStep);
   const role = useDashboard((s) => s.role);
+  const { toggle } = usePlanActions();
   const editable = can(role, "plan:update");
 
   const [hideDone, setHideDone] = useState(false);
@@ -96,7 +97,7 @@ export function PlanView() {
                     scrollTo={step.id === focusedStepId}
                     editable={editable}
                     onToggleOpen={() => setChosen(step.id === openId ? null : step.id)}
-                    onToggleDone={() => togglePlanStep(step.id)}
+                    onToggleDone={() => void toggle(step.id)}
                   />
                 ))}
               </ol>

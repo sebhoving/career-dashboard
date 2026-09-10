@@ -58,21 +58,49 @@ export function useTaskActions() {
 
       useDashboard.getState().logMinutes(id, minutes);
       const after = useDashboard.getState().tasks.find((t) => t.id === id)!;
+      // logMinutes appends the entry that drives the hours chart.
+      const log = useDashboard.getState().timeLog;
+      const entry = log[log.length - 1];
 
       if (!hasSupabase) return;
-      const { error } = await createClient()!
-        .from("tasks")
-        .update({
-          time_spent_minutes: after.timeSpentMinutes,
-          status: after.status,
-          updated_at: after.updatedAt,
-        })
-        .eq("id", id);
+      const supabase = createClient()!;
+      const userId = useDashboard.getState().profile?.id;
 
-      if (error) {
+      const [task, logged] = await Promise.all([
+        supabase
+          .from("tasks")
+          .update({
+            time_spent_minutes: after.timeSpentMinutes,
+            status: after.status,
+            updated_at: after.updatedAt,
+          })
+          .eq("id", id),
+        supabase
+          .from("time_entries")
+          .insert({
+            user_id: userId,
+            task_id: id,
+            entry_date: entry.date,
+            minutes: entry.minutes,
+            category: entry.category,
+          })
+          .select("id")
+          .single(),
+      ]);
+
+      if (task.error || logged.error) {
         useDashboard.getState().replaceTask(before);
-        push({ tone: "warn", title: "Time not saved", body: error.message });
+        useDashboard.getState().removeTimeEntry(entry);
+        push({
+          tone: "warn",
+          title: "Time not saved",
+          body: (task.error ?? logged.error)!.message,
+        });
+        return;
       }
+
+      // Keep the row id so the entry can be edited or removed later.
+      useDashboard.getState().replaceTimeEntry(entry, { ...entry, id: String(logged.data.id) });
     },
     [guard, push],
   );

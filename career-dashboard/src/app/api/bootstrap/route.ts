@@ -26,7 +26,12 @@ export async function GET() {
 
   try {
     return NextResponse.json(await loadSnapshot(supabase, user.id));
-  } catch {
-    return NextResponse.json({ error: "Could not load your data" }, { status: 502 });
+  } catch (e) {
+    // Pass the reason through. The only reader is the signed-in owner, and
+    // "Could not find the table 'public.tasks'" says what to fix.
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Could not load your data" },
+      { status: 502 },
+    );
   }
 }

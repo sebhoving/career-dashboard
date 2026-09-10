@@ -1,10 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   APPLICATIONS,
+  DAILY_METRICS,
   MILESTONES,
   MODULES,
   TASKS,
-  DAILY_METRICS,
   buildDsaProblems,
 } from "@/lib/data/seed";
 import type {
@@ -15,6 +15,7 @@ import type {
   Module,
   Profile,
   Task,
+  TimeEntry,
 } from "@/lib/types";
 
 export interface Snapshot {
@@ -25,7 +26,10 @@ export interface Snapshot {
   problems: DsaProblem[];
   applications: Application[];
   modules: Module[];
-  /** Where the data came from. Surfaced in the UI so nobody mistakes seed for real. */
+  /** Plan step id to the date it was ticked. */
+  planDone: Record<string, string>;
+  timeLog: TimeEntry[];
+  /** Where the data came from. Surfaced in the UI so nobody mistakes one for the other. */
   source: "supabase" | "seed";
 }
 
@@ -33,6 +37,7 @@ type Row = Record<string, unknown>;
 
 const str = (v: unknown, fallback = "") => (v == null ? fallback : String(v));
 const num = (v: unknown, fallback = 0) => (v == null ? fallback : Number(v));
+const date = (v: unknown) => (v ? str(v).slice(0, 10) : null);
 
 export const mapTask = (r: Row): Task => ({
   id: str(r.id),
@@ -40,7 +45,7 @@ export const mapTask = (r: Row): Task => ({
   detail: r.detail ? str(r.detail) : undefined,
   category: r.category as Task["category"],
   status: r.status as Task["status"],
-  dueDate: r.due_date ? str(r.due_date).slice(0, 10) : null,
+  dueDate: date(r.due_date),
   timeSpentMinutes: num(r.time_spent_minutes),
   milestoneId: r.milestone_id ? str(r.milestone_id) : null,
   updatedAt: str(r.updated_at, new Date().toISOString()),
@@ -48,6 +53,7 @@ export const mapTask = (r: Row): Task => ({
 
 export const mapMilestone = (r: Row): Milestone => ({
   id: str(r.id),
+  key: r.key ? str(r.key) : undefined,
   title: str(r.title),
   category: r.category as Milestone["category"],
   phase: str(r.phase),
@@ -69,7 +75,7 @@ export const mapProblem = (r: Row): DsaProblem => ({
   title: str(r.title),
   pattern: str(r.pattern),
   level: r.level as DsaProblem["level"],
-  solvedAt: r.solved_at ? str(r.solved_at).slice(0, 10) : null,
+  solvedAt: date(r.solved_at),
 });
 
 export const mapApplication = (r: Row): Application => ({
@@ -77,9 +83,9 @@ export const mapApplication = (r: Row): Application => ({
   company: str(r.company),
   roleTitle: str(r.role_title),
   stage: r.stage as Application["stage"],
-  appliedOn: r.applied_on ? str(r.applied_on).slice(0, 10) : null,
+  appliedOn: date(r.applied_on),
   nextStep: r.next_step ? str(r.next_step) : null,
-  nextDue: r.next_due ? str(r.next_due).slice(0, 10) : null,
+  nextDue: date(r.next_due),
   notes: r.notes ? str(r.notes) : undefined,
 });
 
@@ -87,13 +93,22 @@ export const mapModule = (r: Row): Module => ({
   id: str(r.id),
   code: str(r.code),
   title: str(r.title),
+  academicYear: str(r.academic_year),
   term: str(r.term),
   credits: num(r.credits),
   relevance: num(r.relevance),
   carryOver: str(r.carry_over),
 });
 
-/** The seed snapshot. Also the shape every test fixture is built from. */
+export const mapTimeEntry = (r: Row): TimeEntry => ({
+  id: str(r.id),
+  date: str(r.entry_date).slice(0, 10),
+  minutes: num(r.minutes),
+  taskId: str(r.task_id),
+  category: r.category as TimeEntry["category"],
+});
+
+/** The starting state: the plan, and nothing done. */
 export function seedSnapshot(): Snapshot {
   return {
     profile: { id: "local", name: "Sebastian", role: "ADMIN" },
@@ -103,39 +118,87 @@ export function seedSnapshot(): Snapshot {
     problems: buildDsaProblems(),
     applications: APPLICATIONS,
     modules: MODULES,
+    planDone: {},
+    timeLog: [],
     source: "seed",
   };
 }
 
 /**
  * One round trip per table, issued in parallel. RLS decides what comes back,
- * so this same call is correct for an admin and for a mentor.
+ * so this same call is correct for the owner and for a mentor.
  */
 export async function loadSnapshot(supabase: SupabaseClient, userId: string): Promise<Snapshot> {
-  const [profile, tasks, milestones, metrics, problems, applications, modules] = await Promise.all([
-    supabase.from("profiles").select("id, name, role").eq("id", userId).single(),
+  const [
+    profile,
+    tasks,
+    milestones,
+    metrics,
+    problems,
+    applications,
+    modules,
+    planProgress,
+    timeEntries,
+  ] = await Promise.all([
+    supabase.from("profiles").select("id, name, role").eq("id", userId).maybeSingle(),
     supabase.from("tasks").select("*").order("due_date", { ascending: true }),
     supabase.from("milestones").select("*").order("start_date", { ascending: true }),
     supabase.from("daily_metrics").select("*").order("date", { ascending: true }),
-    supabase.from("dsa_problems").select("*"),
+    supabase.from("dsa_problems").select("*").order("position", { ascending: true }),
     supabase.from("applications").select("*").order("next_due", { ascending: true }),
-    supabase.from("modules").select("*").order("term", { ascending: true }),
+    supabase
+      .from("modules")
+      .select("*")
+      .order("relevance", { ascending: false })
+      .order("term", { ascending: true }),
+    supabase.from("plan_progress").select("step_id, done_on"),
+    supabase.from("time_entries").select("*").order("entry_date", { ascending: true }),
   ]);
 
+  // supabase-js reports failures in the result instead of throwing. Without
+  // this check a missing table reads as an empty one, and the dashboard
+  // renders blank with nothing to say why.
+  const failure = [
+    profile,
+    tasks,
+    milestones,
+    metrics,
+    problems,
+    applications,
+    modules,
+    planProgress,
+    timeEntries,
+  ].find((r) => r.error)?.error;
+  if (failure) throw new Error(failure.message);
+
+  // Without a profile the role falls back to VIEWER and every write is
+  // refused as "read only", which looks like a permissions bug rather than
+  // the missing row it is.
+  if (!profile.data) {
+    throw new Error(
+      "Your account has no profile row. Run supabase/schema.sql again, which creates one for every existing account",
+    );
+  }
+
+  const planDone: Record<string, string> = {};
+  (planProgress.data ?? []).forEach((r: Row) => {
+    planDone[str(r.step_id)] = str(r.done_on).slice(0, 10);
+  });
+
   return {
-    profile: profile.data
-      ? {
-          id: str(profile.data.id),
-          name: str(profile.data.name),
-          role: profile.data.role as Profile["role"],
-        }
-      : null,
+    profile: {
+      id: str(profile.data.id),
+      name: str(profile.data.name),
+      role: profile.data.role as Profile["role"],
+    },
     tasks: (tasks.data ?? []).map(mapTask),
     milestones: (milestones.data ?? []).map(mapMilestone),
     metrics: (metrics.data ?? []).map(mapMetric),
     problems: (problems.data ?? []).map(mapProblem),
     applications: (applications.data ?? []).map(mapApplication),
     modules: (modules.data ?? []).map(mapModule),
+    planDone,
+    timeLog: (timeEntries.data ?? []).map(mapTimeEntry),
     source: "supabase",
   };
 }

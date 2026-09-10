@@ -79,8 +79,13 @@ interface DashboardState {
   removeTask: (id: string) => void;
 
   togglePlanStep: (id: string) => void;
+  /** Explicit set, used to roll a rejected plan write back. */
+  setPlanStep: (id: string, doneOn: string | null) => void;
   toggleProblem: (id: string) => void;
   replaceProblem: (problem: DsaProblem) => void;
+  /** Both match by reference: the store owns the array and replaces it wholesale. */
+  replaceTimeEntry: (target: TimeEntry, next: TimeEntry) => void;
+  removeTimeEntry: (target: TimeEntry) => void;
 
   addApplication: (app: Omit<Application, "id">) => void;
   replaceApplication: (app: Application) => void;
@@ -136,7 +141,10 @@ export const useDashboard = create<DashboardState>()(
               tasks: snapshot.tasks,
               applications: snapshot.applications,
               metrics: snapshot.metrics,
-              // Reference data falls back to the built-in plan when a table is empty.
+              planDone: snapshot.planDone,
+              timeLog: snapshot.timeLog,
+              // Reference data falls back to the built-in plan when a table is
+              // empty, which is the state until seed.sql has been run.
               milestones: snapshot.milestones.length ? snapshot.milestones : MILESTONES,
               problems: snapshot.problems.length ? snapshot.problems : buildDsaProblems(),
               modules: snapshot.modules.length ? snapshot.modules : MODULES,
@@ -208,12 +216,26 @@ export const useDashboard = create<DashboardState>()(
         return { planDone };
       }),
 
+    setPlanStep: (id, doneOn) =>
+      set((s) => {
+        const planDone = { ...s.planDone };
+        if (doneOn) planDone[id] = doneOn;
+        else delete planDone[id];
+        return { planDone };
+      }),
+
     toggleProblem: (id) =>
       set((s) => ({
         problems: s.problems.map((p) =>
           p.id === id ? { ...p, solvedAt: p.solvedAt ? null : todayIso() } : p,
         ),
       })),
+
+    replaceTimeEntry: (target, next) =>
+      set((s) => ({ timeLog: s.timeLog.map((e) => (e === target ? next : e)) })),
+
+    removeTimeEntry: (target) =>
+      set((s) => ({ timeLog: s.timeLog.filter((e) => e !== target) })),
 
     replaceProblem: (problem) =>
       set((s) => ({ problems: s.problems.map((p) => (p.id === problem.id ? problem : p)) })),
@@ -261,9 +283,15 @@ export function milestoneProgress(
   done: Record<string, string>,
   steps: PlanStep[] = PLAN_STEPS,
 ) {
-  const linked = steps.filter((s) => s.milestoneId === milestone.id);
+  const linked = stepsForMilestone(milestone, steps);
   if (!linked.length) return milestone.progress;
   return Math.round((linked.filter((s) => done[s.id]).length / linked.length) * 100);
+}
+
+/** Match on `key` first: from Postgres `id` is a uuid the plan knows nothing about. */
+export function stepsForMilestone(milestone: Milestone, steps: PlanStep[] = PLAN_STEPS) {
+  const match = milestone.key ?? milestone.id;
+  return steps.filter((s) => s.milestoneId === match);
 }
 
 // ------------------------------------------------------------------ series

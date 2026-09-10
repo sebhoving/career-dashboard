@@ -22,7 +22,10 @@ export function useBootstrap() {
           window.location.assign("/sign-in");
           return;
         }
-        if (!res.ok) throw new Error(`Bootstrap failed with ${res.status}`);
+        if (!res.ok) {
+          const body = (await res.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(body?.error ?? `Bootstrap failed with ${res.status}`);
+        }
         const snapshot = await res.json();
         if (!cancelled) hydrate(snapshot);
       } catch (e) {

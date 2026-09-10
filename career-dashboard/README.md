@@ -25,32 +25,67 @@ and everything you tick is saved in the browser (localStorage). Use
 
 ### Connect a backend (optional)
 
-1. Create a Supabase project.
-2. Paste `supabase/schema.sql` into the SQL editor and run it. It creates the
-   tables, the enums, the row level security policies and the realtime
-   publication.
-3. Copy `.env.example` to `.env.local` and fill it in:
+Five steps. All but step 2 happen in the Supabase dashboard.
+
+**1. Create the project.** At supabase.com, create a project and copy its URL
+and publishable key (`sb_publishable_...`, or the legacy `anon` key) from
+Project Settings, API Keys.
+
+**2. Fill in `.env.local`:**
 
 ```
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-GITHUB_USERNAME=...     # switches the commit heatmap on
-GITHUB_TOKEN=...        # classic PAT, read:user scope
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable or anon key>
 ```
 
-4. Restart. Sign in is now enforced by `src/middleware.ts`, and the role in
-   your `profiles` row decides what you can edit. Tasks, applications and
-   problem solves go to Postgres; plan steps and logged time stay in the
-   browser (the schema has no table for them yet).
+`SUPABASE_SERVICE_ROLE_KEY` is not used by any code path; leave it blank.
+The GitHub variables are independent of Supabase and keep working either way.
 
-Your first account is created as `VIEWER`. Promote it once, by hand:
+**3. Run `supabase/schema.sql`** in the SQL editor. It creates the tables, the
+enums, the RLS policies and the realtime publication. It is safe to run
+again: anything that already exists is skipped. The one change it makes to an
+existing table is on `modules`, where `credits` widens to hold ECTS halves and
+`academic_year` is added.
 
-```sql
-update profiles set role = 'ADMIN' where name = 'your name';
-```
+It also creates a `profiles` row for any account that signed in before the
+schema existed, and makes the oldest one `ADMIN`. So it does not matter
+whether you sign in before or after this step.
 
-The `dsa_problems` table starts empty. Until you insert the list, the
-dashboard shows the built-in NeetCode 150 and refuses to save ticks against it.
+**4. Allow the sign in redirect.** In Authentication, URL Configuration, set
+the Site URL to `http://localhost:3000` and add
+`http://localhost:3000/auth/callback` to Redirect URLs. Add your deployed
+origin the same way when you deploy. Without it, GitHub sign in lands on the
+Site URL instead of the callback and no session is created. Email accounts
+have no sign up form; add them in Authentication, Users.
+
+**5. Sign in, then run `supabase/seed.sql`.** The first account to sign
+in is created `ADMIN` by the `handle_new_user` trigger, so it owns the
+dashboard; everyone after it is a `VIEWER`. Nothing to promote by hand.
+
+`seed.sql` loads the reference data: the 11 roadmap milestones, the 8 degree
+modules confirmed for 2026-27 and the NeetCode 150, all unsolved. It seeds
+`ADMIN` profiles only, raises a clear error if it finds none, and is
+idempotent, so re-running it never disturbs work you have already ticked.
+Modules carry no progress, so a re-run refreshes them to match the file.
+
+Sign in is enforced by `src/middleware.ts`, and the role in your `profiles`
+row decides what you can edit.
+
+#### What moves to Postgres
+
+Tasks, applications, plan step ticks, logged time and problem solves all get
+tables and are written through on every change, optimistically with rollback.
+Realtime is subscribed for tasks and applications; the other tables are in the
+publication but the client does not listen to them yet.
+
+Until `seed.sql` has run, the milestone, module and problem tables are empty
+and the app falls back to the built-in lists so the page still renders. Ticking
+a problem in that state is refused with an explanation rather than silently
+failing, because there is no row to update.
+
+Milestones carry a `key` column (`m1`...`m11`). The plan in
+`src/lib/data/plan.ts` links to that key rather than the row's uuid, so
+roadmap progress keeps working whatever id Postgres assigns.
 
 ## How it fits together
 
@@ -75,10 +110,12 @@ src/
     data/seed.ts          the starting state: milestones, modules, nothing done
     data/repository.ts    row mapping, seed snapshot, live snapshot
     store.ts              Zustand state plus every derived selector
-    hooks/                bootstrap, local persistence, realtime, task/problem/application writes
+    hooks/                bootstrap, local persistence, realtime, and the
+                          task / plan / problem / application write paths
     rbac.ts               the permission table
   middleware.ts           session refresh and route gating
 supabase/schema.sql       tables, RLS, realtime publication
+supabase/seed.sql         reference data: milestones, modules, the 150
 ```
 
 ### Decisions worth knowing
@@ -95,15 +132,18 @@ separate progress table to drift out of date.
 
 **The browser is the database until Supabase is.** `useLocalPersistence`
 saves tasks, applications, problem solves, plan ticks and time entries to
-localStorage and restores them before the bootstrap fetch lands. With
-Supabase configured only plan ticks and time entries stay local.
+localStorage and restores them before the bootstrap fetch lands. With Supabase
+configured it stands down completely: every one of those has a table, and the
+bootstrap snapshot is the only source.
 
 **Writes are optimistic with rollback.** Every action hook updates the store
 first, then writes. A rejected write restores the previous row and raises a
 toast rather than leaving the screen quietly wrong.
 
 **Permissions are enforced twice.** `src/lib/rbac.ts` hides controls a
-viewer cannot use. Postgres RLS rejects the write regardless.
+viewer cannot use. Postgres RLS rejects the write regardless. The client can
+update only the `name` column of its own profile, so a viewer cannot promote
+itself; roles are changed in the Supabase dashboard.
 
 **Charts downsample before they draw.** `downsample()` in `src/lib/utils.ts`
 buckets a series to a point ceiling, so the ALL range draws weekly averages
@@ -112,9 +152,6 @@ roadmap falls back to a list there.
 
 ## What is not done
 
-- **Plan steps and time entries have no table.** They live in localStorage
-  in both modes. Adding `plan_progress` and `time_entries` to the schema and
-  wiring them through the action hooks is the next backend step.
 - **The `daily_metrics` table is never written to.** Everything the UI needs
   is derived on the client, so it only matters for a future nightly job.
 - **No tests.** The plan and the problem list are deterministic, so snapshot

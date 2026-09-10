@@ -34,6 +34,11 @@ export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
   const isPublic = path.startsWith("/sign-in") || path.startsWith("/auth");
 
+  // API routes answer for themselves. Redirecting them to the sign-in page
+  // would hand fetch() an HTML body, and /api/bootstrap returns a 401 that
+  // useBootstrap already knows how to act on.
+  if (path.startsWith("/api")) return response;
+
   if (!user && !isPublic) {
     const target = request.nextUrl.clone();
     target.pathname = "/sign-in";
@@ -52,5 +57,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\\\.(?:svg|png|jpg|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|webp)$).*)"],
 };

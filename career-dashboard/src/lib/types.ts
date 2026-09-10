@@ -40,6 +40,12 @@ export interface Task {
 
 export interface Milestone {
   id: string;
+  /**
+   * Stable identifier the built-in plan links to ('m1'...'m11'). Locally it
+   * equals `id`; from Postgres `id` is a uuid and this is the `key` column,
+   * so plan steps keep matching whatever uuid the row was given.
+   */
+  key?: string;
   title: string;
   category: Category;
   phase: string;
@@ -58,6 +64,8 @@ export interface DailyMetric {
 
 /** One press of a "+25m" button. Kept per day so the hours chart has a series to draw. */
 export interface TimeEntry {
+  /** Absent until the row comes back from Postgres. */
+  id?: string;
   date: string; // yyyy-MM-dd
   minutes: number;
   taskId: string;
@@ -88,8 +96,10 @@ export interface Module {
   id: string;
   code: string;
   title: string;
-  term: string;
-  credits: number;
+  /** Academic year the module runs in, e.g. "2026-27". Empty on rows seeded before it existed. */
+  academicYear: string;
+  term: string; // "Term 1", "Term 2" or "Terms 1 and 2"
+  credits: number; // ECTS, so a standard module is 7.5
   relevance: number; // 1-5, weight toward the target role
   carryOver: string;
 }
